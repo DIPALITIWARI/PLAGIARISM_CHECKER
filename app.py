@@ -8,21 +8,15 @@ import logging
 import docx2txt
 import PyPDF2
 
-app = Flask(__name__)  # Sahi wala __name__
-
-# Logging
+app = Flask(__name__)  
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
-
-# Constants
-PLAGIARISM_THRESHOLD = 80
+HOLD = 80
 model = SentenceTransformer("all-MiniLM-L6-v2")
 
-# Load Dataset
 df = pd.read_csv("train.csv")
 df["processed"] = df["description_y"].astype(str).str.lower().str.replace(r"[^\w\s]", "", regex=True)
 
-# Function to get filtered embeddings by subject
 def get_embeddings_by_subject(subject):
     subject_map = {
         "daa": "DAA",
@@ -36,7 +30,6 @@ def get_embeddings_by_subject(subject):
     embeddings = model.encode(texts, convert_to_tensor=False)
     return texts, embeddings
 
-# Matching logic
 def find_matches(text, subject, top_n=3):
     text = text.lower().strip()
     user_embedding = model.encode([text])
