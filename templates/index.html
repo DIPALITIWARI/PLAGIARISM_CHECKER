@@ -1,0 +1,139 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Plagiarism Checker</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-purple-50 min-h-screen flex flex-col justify-between font-sans">
+
+<header class="bg-white shadow-md p-4 flex justify-between items-center">
+  <h1 class="text-xl font-bold text-blue-600">Plagiarism Checker</h1>
+  <nav class="space-x-4 text-gray-600 text-sm font-medium">
+    <button onclick="openModal('contactText')" class="hover:text-blue-500 transition">Contact</button>
+    <button onclick="openModal('aboutText')" class="hover:text-blue-500 transition">About</button>
+    <button onclick="openModal('helpText')" class="hover:text-blue-500 transition">Help</button>
+  </nav>
+</header>
+
+<main class="flex-grow flex items-center justify-center p-6">
+  <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-3xl space-y-6">
+    <h2 class="text-2xl font-semibold text-center text-gray-800 mb-2">Check for Plagiarism</h2>
+    <form id="check-form" class="space-y-6">
+      <select id="topic" class="w-full p-3 rounded-xl bg-blue-100">
+        <option value="daa">DAA (Sorting, Searching, Graphs)</option>
+        <option value="oops">OOPs</option>
+        <option value="ml">Machine Learning Algorithms</option>
+        <option value="cyber">Cyber Security Theory</option>
+      </select>
+      <textarea id="userText" rows="6" placeholder="Write your theory here..." class="w-full p-3 rounded-xl bg-blue-100 resize-none"></textarea>
+      <input type="file" id="upload" accept=".txt,.pdf,.docx" class="w-full" />
+      <div class="flex gap-4 justify-center">
+        <button type="button" id="check-btn" class="bg-blue-500 text-white px-6 py-3 rounded-xl">🔍 Check Text</button>
+        <button type="button" id="upload-btn" class="bg-green-500 text-white px-6 py-3 rounded-xl">📄 Check File</button>
+      </div>
+    </form>
+    <div id="detection" class="text-center text-lg font-bold mt-4"></div>
+    <div id="result" class="text-gray-700 mt-4 space-y-2"></div>
+  </div>
+</main>
+
+<footer class="bg-white text-center text-sm text-gray-600 p-4">
+  © 2025 AI Exposures, AlgoVengers. All Rights Reserved.
+</footer>
+
+<div id="modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+  <div class="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
+    <div id="modal-content"></div>
+    <button onclick="closeModal()" class="mt-4 px-4 py-2 bg-red-500 text-white rounded">Close</button>
+  </div>
+</div>
+
+<div id="contactText" class="hidden"><h2>Contact</h2><p>Email: support@plagiarism.com</p><p>CONTACT:+91-93188071XX</p></div>
+<div id="aboutText" class="hidden"><h2>About</h2><p>This tool detects AI-based plagiarism in your subject-specific answers.</p></div>
+<div id="helpText" class="hidden"><h2>Help</h2><p>Select topic, enter or upload content, and click check.</p></div>
+
+<script>
+function openModal(id) {
+  document.getElementById('modal').classList.remove('hidden');
+  document.getElementById('modal-content').innerHTML = document.getElementById(id).innerHTML;
+}
+function closeModal() {
+  document.getElementById('modal').classList.add('hidden');
+}
+
+document.getElementById("check-btn").addEventListener("click", async () => {
+  const inputText = document.getElementById("userText").value.trim();
+  const topic = document.getElementById("topic").value;
+  const resultDiv = document.getElementById("result");
+  const detectionDiv = document.getElementById("detection");
+
+  if (!inputText) {
+    resultDiv.innerHTML = "<p class='text-red-500'>Please enter some text to check.</p>";
+    return;
+  }
+
+  const response = await fetch("/check_plagiarism", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user_text: inputText, topic }),
+  });
+
+  const data = await response.json();
+  if (data.error) {
+    resultDiv.innerHTML = `<p class='text-red-500'>${data.error}</p>`;
+  } else {
+    const { similarity_score, plagiarism_detected, matches } = data;
+    detectionDiv.innerHTML = plagiarism_detected
+      ? "<p class='text-red-600 text-xl font-semibold'>⚠ Plagiarism Detected</p>"
+      : "<p class='text-green-600 text-xl font-semibold'>✅ No Plagiarism Detected</p>";
+    resultDiv.innerHTML = `
+      <p>Best Match Similarity Score: <strong>${similarity_score}%</strong></p>
+      <ul class='list-disc pl-6 mt-2'>
+        ${matches.map(m => `<li>"${m.text}"<br><span class='text-sm text-gray-600'>Score: ${m.score}%</span></li>`).join("")}
+      </ul>
+    `;
+  }
+});
+
+document.getElementById("upload-btn").addEventListener("click", async () => {
+  const fileInput = document.getElementById("upload");
+  const topic = document.getElementById("topic").value;
+  const resultDiv = document.getElementById("result");
+  const detectionDiv = document.getElementById("detection");
+
+  if (fileInput.files.length === 0) {
+    resultDiv.innerHTML = "<p class='text-red-500'>Please select a document to upload.</p>";
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append("file", fileInput.files[0]);
+  formData.append("topic", topic);
+
+  const response = await fetch("/upload_document", {
+    method: "POST",
+    body: formData,
+  });
+
+  const data = await response.json();
+  if (data.error) {
+    resultDiv.innerHTML = `<p class='text-red-500'>${data.error}</p>`;
+  } else {
+    const { similarity_score, plagiarism_detected, matches } = data;
+    detectionDiv.innerHTML = plagiarism_detected
+      ? "<p class='text-red-600 text-xl font-semibold'>⚠ Plagiarism Detected</p>"
+      : "<p class='text-green-600 text-xl font-semibold'>✅ No Plagiarism Detected</p>";
+    resultDiv.innerHTML = `
+      <p>Best Match Similarity Score: <strong>${similarity_score}%</strong></p>
+      <ul class='list-disc pl-6 mt-2'>
+        ${matches.map(m => `<li>"${m.text}"<br><span class='text-sm text-gray-600'>Score: ${m.score}%</span></li>`).join("")}
+      </ul>
+    `;
+  }
+});
+</script>
+</body>
+</html>
